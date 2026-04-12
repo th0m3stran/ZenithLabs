@@ -3,6 +3,7 @@ from app.chunking import chunk_documents
 from app.embeddings import EmbeddingModel
 from app.retrieval import VectorStore
 from pathlib import Path
+from app.generator import generate_response
 
 def build_pipeline():
     BASE_DIR = Path(__file__).resolve().parent.parent
