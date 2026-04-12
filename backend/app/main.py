@@ -9,16 +9,16 @@ def build_pipeline():
     DOCS_DIR = BASE_DIR / "data" / "documents"
 
     docs = load_documents(str(DOCS_DIR))
-    print("Docs loaded:", docs)
+    print("Docs loaded:", docs) #Debugging checkpoint 
 
     chunks = chunk_documents(docs)
-    print("Chunks returned:", chunks)
+    print("Chunks returned:", chunks) #Debugging checkpoint
 
     if not chunks:
         raise ValueError("No text chunks created. Make sure document files contain text. ")
 
     embedding_model = EmbeddingModel()
-    texts = [chunk["text"] for chunk in chunks] #chunks is returning none
+    texts = [chunk["text"] for chunk in chunks]
     embeddings = embedding_model.encode_texts(texts)
 
     dimension = embeddings.shape[1]
