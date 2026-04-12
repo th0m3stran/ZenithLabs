@@ -1,19 +1,33 @@
+from pathlib import Path
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
 from app.ingestion import load_documents
 from app.chunking import chunk_documents
 from app.embeddings import EmbeddingModel
 from app.retrieval import VectorStore
-from pathlib import Path
 from app.generator import generate_response
+from app.schemas import QueryResponse, QueryResult, QueryRequest
+
+app = FastAPI(title="ZenithLabs API")
+
+#Allow frontend requests for later
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 def build_pipeline():
     BASE_DIR = Path(__file__).resolve().parent.parent
     DOCS_DIR = BASE_DIR / "data" / "documents"
 
     docs = load_documents(str(DOCS_DIR))
-    print("Docs loaded:", docs) #Debugging checkpoint 
 
     chunks = chunk_documents(docs)
-    print("Chunks returned:", chunks) #Debugging checkpoint
 
     if not chunks:
         raise ValueError("No text chunks created. Make sure document files contain text. ")
@@ -28,23 +42,35 @@ def build_pipeline():
 
     return embedding_model, vector_store
 
-def test_query(query: str):
-    embedding_model, vector_store = build_pipeline()
-    query_embedding = embedding_model.encode_query(query)
-    results = vector_store.search(query_embedding, top_k=3)
+# Build once when app starts
+embedding_model, vector_store = build_pipeline()
+
+
+@app.get("/")
+def root():
+    return {"message": "ZenithLabs API is running"}
+
+@app.post("/query", response_model=QueryResponse)
+def query_docs(request: QueryRequest):
+    query_embedding = embedding_model.encode_query(request.query)
+    results = vector_store.search(query_embedding, top_k=request.top_k)
 
     contexts = [result["text"] for result in results]
-    answer = generate_response(query, contexts)
+    answer = generate_response(request.query, contexts)
 
-    print(f"\nQuery: {query}\n")
-    print("Generated Answer:")
-    print(answer)
-    print("\nRetrieved Context:")
-    for i, result in enumerate(results, start=1):
-        print(f"Result {i}:")
-        print(f"Source:{result['source']}")
-        print(result["text"])
-        print("-" * 40)
+    formatted_results = [
+        QueryResult(
+            source=result["source"],
+            text=result["text"],
+            distance=result["distance"],
+        )
+        for result in results
+    ]
 
-if __name__ == "__main__":
-    test_query("What should I eat after a workout?")
+    return QueryResponse(
+        query=request.query,
+        answer=answer,
+        results=formatted_results
+    )
+
+
