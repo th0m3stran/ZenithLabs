@@ -1,4 +1,4 @@
-import {useState} from "react";
+import { useState, useRef, useEffect } from "react";
 
 type QueryResult = {
   source: string;
@@ -12,20 +12,47 @@ type QueryResponse = {
   results: QueryResult[];
 };
 
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+  results?: QueryResult[];
+  loading?: boolean;
+};
+
 export default function App() {
   const [query, setQuery] = useState("");
-  const [answer, setAnswer] = useState("");
-  const [results, setResults] = useState<QueryResult[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSubmit = async () => {
-    if (!query.trim()) return;
+  const chatEndRef = useRef<HTMLDivElement | null>(null);
 
-    setLoading(true);
+  //'Smooth' scrolling on new messages feature
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({behavior:"smooth"});
+  }, [messages]);
+
+
+  const handleSubmit = async () => {
+    if (!query.trim() || loading) return;
+
+    const userQuery = query.trim();
+    setQuery("");
     setError("");
-    setAnswer("");
-    setResults([]);
+    setLoading(true);
+
+    const userMessage: ChatMessage = {
+      role: "user",
+      content: userQuery,
+    };
+
+    const thinkingMessage: ChatMessage = {
+      role: "assistant",
+      content: "NOVA is thinking",
+      loading: true,
+    };
+
+    setMessages((prev) => [...prev, userMessage, thinkingMessage]);
 
     try {
       const response = await fetch("http://127.0.0.1:8000/query", {
@@ -34,35 +61,112 @@ export default function App() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          query,
+          query: userQuery,
           top_k: 3,
         }),
       });
 
-      if (!response.ok){
+      if (!response.ok) {
         throw new Error("Failed to fetch response from backend.");
       }
 
       const data: QueryResponse = await response.json();
-      setAnswer(data.answer);
-      setResults(data.results);
+
+      setMessages((prev) => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          role: "assistant",
+          content: data.answer,
+          results: data.results,
+        };
+        return updated;
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message: "Something went wrong.");
+      setMessages((prev) => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          role: "assistant",
+          content: "Something went wrong while contacting the backend.",
+        };
+        return updated;
+      });
+
+      setError(err instanceof Error ? err.message : "Unknown error.");
     } finally {
       setLoading(false);
     }
   };
 
-   return (
+  return (
     <div style={styles.page}>
       <div style={styles.container}>
         <h1 style={styles.title}>ZenithLabs</h1>
-        <p style={styles.subtitle}>Ask NOVA a health and wellness question.</p>
+        <p style={styles.subtitle}>Ask NOVA your AI health assistant.</p>
+
+        <div style={styles.chatWindow}>
+          {messages.length === 0 && (
+            <div style={styles.emptyState}>
+              <p>Start by asking something like:</p>
+              <p style={styles.example}>"What should I eat after a workout?"</p>
+            </div>
+          )}
+
+          {messages.map((message, index) => (
+            <div
+              key={index}
+              style={{
+                ...styles.messageRow,
+                justifyContent:
+                  message.role === "user" ? "flex-end" : "flex-start",
+              }}
+            >
+              <div
+                style={{
+                  ...styles.messageBubble,
+                  ...(message.role === "user"
+                    ? styles.userBubble
+                    : styles.assistantBubble),
+                }}
+              >
+                <div style={styles.messageLabel}>
+                  {message.role === "user" ? "You" : "NOVA"}
+                </div>
+
+                <p style={styles.messageText}>
+                  {message.loading ? (
+                    <span>
+                      NOVA is thinking<span style={styles.dots}>...</span>
+                    </span>
+                  ) : (
+                    message.content
+                  )}
+                </p>
+
+                {message.role === "assistant" &&
+                  !message.loading &&
+                  message.results &&
+                  message.results.length > 0 && (
+                    <div style={styles.sourcesBox}>
+                      <h4 style={styles.sourcesTitle}>Retrieved Context</h4>
+                      {message.results.map((result, i) => (
+                        <div key={i} style={styles.sourceItem}>
+                          <strong>{result.source}</strong>
+                          <p style={styles.sourceText}>{result.text}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+              </div>
+            </div>
+          ))}
+          <div ref={chatEndRef} />
+        </div>
+
 
         <div style={styles.inputRow}>
           <input
             type="text"
-            placeholder="What should I eat after a workout?"
+            placeholder="Ask NOVA a question..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
@@ -70,36 +174,16 @@ export default function App() {
             }}
             style={styles.input}
           />
-          <button onClick={handleSubmit} style={styles.button} disabled={loading}>
+          <button
+            onClick={handleSubmit}
+            style={styles.button}
+            disabled={loading}
+          >
             {loading ? "Thinking..." : "Ask"}
           </button>
         </div>
 
         {error && <p style={styles.error}>{error}</p>}
-
-        {answer && (
-          <div style={styles.card}>
-            <h2 style={styles.sectionTitle}>Answer</h2>
-            <p style={styles.answer}>{answer}</p>
-          </div>
-        )}
-
-        {results.length > 0 && (
-          <div style={styles.card}>
-            <h2 style={styles.sectionTitle}>Retrieved Context</h2>
-            {results.map((result, index) => (
-              <div key={`${result.source}-${index}`} style={styles.resultItem}>
-                <p style={styles.source}>
-                  <strong>Source:</strong> {result.source}
-                </p>
-                <p style={styles.text}>{result.text}</p>
-                <p style={styles.distance}>
-                  <strong>Distance:</strong> {result.distance.toFixed(4)}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );
@@ -110,36 +194,98 @@ const styles: Record<string, React.CSSProperties> = {
     minHeight: "100vh",
     backgroundColor: "#0f172a",
     color: "#e2e8f0",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "flex-start",
-    padding: "40px 20px",
+    padding: "32px 20px",
     fontFamily: "Inter, system-ui, sans-serif",
   },
   container: {
-    width: "100%",
     maxWidth: "900px",
+    margin: "0 auto",
   },
   title: {
-    fontSize: "2.5rem",
+    fontSize: "2.25rem",
     marginBottom: "0.5rem",
   },
   subtitle: {
     color: "#94a3b8",
-    marginBottom: "1.5rem",
+    marginBottom: "20px",
+  },
+  chatWindow: {
+    minHeight: "420px",
+    backgroundColor: "#111827",
+    border: "1px solid #1f2937",
+    borderRadius: "16px",
+    padding: "20px",
+    marginBottom: "20px",
+    overflowY: "auto",
+  },
+  emptyState: {
+    color: "#94a3b8",
+    textAlign: "center",
+    padding: "60px 20px",
+  },
+  example: {
+    color: "#cbd5e1",
+    fontStyle: "italic",
+  },
+  messageRow: {
+    display: "flex",
+    marginBottom: "16px",
+  },
+  messageBubble: {
+    maxWidth: "75%",
+    borderRadius: "16px",
+    padding: "14px 16px",
+    lineHeight: 1.6,
+  },
+  userBubble: {
+    backgroundColor: "#2563eb",
+    color: "#ffffff",
+  },
+  assistantBubble: {
+    backgroundColor: "#1e293b",
+    color: "#e2e8f0",
+  },
+  messageLabel: {
+    fontSize: "0.8rem",
+    opacity: 0.8,
+    marginBottom: "6px",
+    fontWeight: 600,
+  },
+  messageText: {
+    margin: 0,
+    whiteSpace: "pre-wrap",
+  },
+  dots: {
+    letterSpacing: "2px",
+  },
+  sourcesBox: {
+    marginTop: "14px",
+    paddingTop: "12px",
+    borderTop: "1px solid #334155",
+  },
+  sourcesTitle: {
+    margin: "0 0 10px 0",
+    fontSize: "0.95rem",
+  },
+  sourceItem: {
+    marginBottom: "12px",
+  },
+  sourceText: {
+    margin: "6px 0 0 0",
+    color: "#cbd5e1",
+    fontSize: "0.95rem",
   },
   inputRow: {
     display: "flex",
-    gap: "12px",
-    marginBottom: "24px",
+    gap: "10px",
   },
   input: {
     flex: 1,
-    padding: "14px 16px",
+    padding: "14px",
     borderRadius: "12px",
     border: "1px solid #334155",
     backgroundColor: "#1e293b",
-    color: "#f8fafc",
+    color: "#ffffff",
     fontSize: "1rem",
   },
   button: {
@@ -147,43 +293,12 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: "12px",
     border: "none",
     backgroundColor: "#2563eb",
-    color: "white",
+    color: "#ffffff",
     cursor: "pointer",
     fontWeight: 600,
   },
-  card: {
-    backgroundColor: "#111827",
-    border: "1px solid #1f2937",
-    borderRadius: "16px",
-    padding: "20px",
-    marginBottom: "20px",
-  },
-  sectionTitle: {
-    marginTop: 0,
-    marginBottom: "12px",
-  },
-  answer: {
-    lineHeight: 1.7,
-  },
-  resultItem: {
-    borderTop: "1px solid #1f2937",
-    paddingTop: "16px",
-    marginTop: "16px",
-  },
-  source: {
-    marginBottom: "8px",
-    color: "#cbd5e1",
-  },
-  text: {
-    marginBottom: "8px",
-    lineHeight: 1.6,
-  },
-  distance: {
-    color: "#94a3b8",
-    fontSize: "0.9rem",
-  },
   error: {
+    marginTop: "12px",
     color: "#f87171",
-    marginBottom: "16px",
   },
 };
