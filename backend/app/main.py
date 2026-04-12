@@ -33,7 +33,13 @@ def test_query(query: str):
     query_embedding = embedding_model.encode_query(query)
     results = vector_store.search(query_embedding, top_k=3)
 
+    contexts = [result["text"] for result in results]
+    answer = generate_response(query, contexts)
+
     print(f"\nQuery: {query}\n")
+    print("Generated Answer:")
+    print(answer)
+    print("\nRetrieved Context:")
     for i, result in enumerate(results, start=1):
         print(f"Result {i}:")
         print(f"Source:{result['source']}")
