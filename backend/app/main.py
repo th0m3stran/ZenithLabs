@@ -2,13 +2,23 @@ from app.ingestion import load_documents
 from app.chunking import chunk_documents
 from app.embeddings import EmbeddingModel
 from app.retrieval import VectorStore
+from pathlib import Path
 
 def build_pipeline():
-    docs = load_documents("data/documents")
+    BASE_DIR = Path(__file__).resolve().parent.parent
+    DOCS_DIR = BASE_DIR / "data" / "documents"
+
+    docs = load_documents(str(DOCS_DIR))
+    print("Docs loaded:", docs)
+
     chunks = chunk_documents(docs)
+    print("Chunks returned:", chunks)
+
+    if not chunks:
+        raise ValueError("No text chunks created. Make sure document files contain text. ")
 
     embedding_model = EmbeddingModel()
-    texts = [chunk["text"] for chunk in chunks]
+    texts = [chunk["text"] for chunk in chunks] #chunks is returning none
     embeddings = embedding_model.encode_texts(texts)
 
     dimension = embeddings.shape[1]
