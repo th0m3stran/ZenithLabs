@@ -33,6 +33,30 @@ export default function App() {
   }, [messages]);
 
 
+  //'ChatGPT' style typing animation, reveals one character at a time
+  const typeAssistantMessage = (fullText: string, results?: QueryResult[]) => {
+    let index = 0;
+
+    const interval = setInterval(() => {
+      index++;
+
+      setMessages((prev) => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          role: "assistant",
+          content: fullText.slice(0, index),
+          results: index >= fullText.length ? results : undefined,
+        };
+        return updated;
+      });
+
+      if (index >= fullText.length){
+        clearInterval(interval);
+      }
+    }, 15); // Controls the typing speed
+  };
+
+
   const handleSubmit = async () => {
     if (!query.trim() || loading) return;
 
@@ -76,11 +100,14 @@ export default function App() {
         const updated = [...prev];
         updated[updated.length - 1] = {
           role: "assistant",
-          content: data.answer,
-          results: data.results,
+          content: "",
+          loading: false,
         };
         return updated;
       });
+
+      typeAssistantMessage(data.answer, data.results);
+
     } catch (err) {
       setMessages((prev) => {
         const updated = [...prev];
