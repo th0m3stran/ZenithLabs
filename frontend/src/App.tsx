@@ -24,6 +24,7 @@ export default function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isTyping, setIsTyping] = useState(false)
 
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -33,9 +34,10 @@ export default function App() {
   }, [messages]);
 
 
-  //'ChatGPT' style typing animation, reveals one character at a time
-  const typeAssistantMessage = (fullText: string, results?: QueryResult[]) => {
+  //'ChatGPT' style print animation, reveals one character at a time + Blinking cursor
+   const typeAssistantMessage = (fullText: string, results?: QueryResult[]) => {
     let index = 0;
+    setIsTyping(true);
 
     const interval = setInterval(() => {
       index++;
@@ -50,11 +52,14 @@ export default function App() {
         return updated;
       });
 
-      if (index >= fullText.length){
+      if (index >= fullText.length) {
         clearInterval(interval);
+        setIsTyping(false);
       }
-    }, 15); // Controls the typing speed
+    }, 15); // Controls typing speed
   };
+
+
 
 
   const handleSubmit = async () => {
@@ -161,11 +166,16 @@ export default function App() {
 
                 <p style={styles.messageText}>
                   {message.loading ? (
-                    <span>
-                      NOVA is thinking<span style={styles.dots}>...</span>
+                      <span>
+                      NOVA is synthesising insights<span style={styles.dots}>...</span>
                     </span>
                   ) : (
-                    message.content
+                      <>
+                        {message.content}
+                        {message.role === "assistant" &&
+                            index === messages.length - 1 &&
+                            isTyping && <span style={styles.cursor}>|</span>}
+                      </>
                   )}
                 </p>
 
@@ -328,4 +338,10 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: "12px",
     color: "#f87171",
   },
+  cursor: {
+  display: "inline-block",
+  marginLeft: "2px",
+  animation: "blink 1s step-start infinite",
+  fontWeight: 400,
+},
 };
