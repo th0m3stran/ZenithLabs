@@ -77,7 +77,7 @@ export default function App() {
 
     const thinkingMessage: ChatMessage = {
       role: "assistant",
-      content: "NOVA is thinking",
+      content: "Atlas is building your plan...",
       loading: true,
     };
 
@@ -132,8 +132,8 @@ export default function App() {
   return (
     <div style={styles.page}>
       <div style={styles.container}>
-        <h1 style={styles.title}>ZenithLabs</h1>
-        <p style={styles.subtitle}>Ask NOVA your AI health assistant.</p>
+        <h1 style={styles.title}>MyTrainer.AI</h1>
+        <p style={styles.subtitle}>Ask Atlas your AI personal trainer and coaching agent.</p>
 
         <div style={styles.chatWindow}>
           {messages.length === 0 && (
@@ -161,13 +161,13 @@ export default function App() {
                 }}
               >
                 <div style={styles.messageLabel}>
-                  {message.role === "user" ? "You" : "NOVA"}
+                  {message.role === "user" ? "You" : "Atlas"}
                 </div>
 
                 <p style={styles.messageText}>
                   {message.loading ? (
                       <span>
-                      NOVA is synthesising insights<span style={styles.dots}>...</span>
+                      Atlas is synthesising insights<span style={styles.dots}>...</span>
                     </span>
                   ) : (
                       <>
@@ -203,7 +203,7 @@ export default function App() {
         <div style={styles.inputRow}>
           <input
             type="text"
-            placeholder="Ask NOVA a question..."
+            placeholder="Ask Atlas a question..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {

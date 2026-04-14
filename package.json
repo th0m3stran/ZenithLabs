@@ -1,5 +1,5 @@
 {
-  "name": "zenithlabs",
+  "name": "mytrainer-ai",
   "private": true,
   "scripts": {
     "backend": "cd backend && ..\\.venv\\Scripts\\python -m uvicorn app.main:app --reload",

@@ -10,7 +10,7 @@ from app.retrieval import VectorStore
 from app.generator import generate_response
 from app.schemas import QueryResponse, QueryRequest
 
-app = FastAPI(title="ZenithLabs API")
+app = FastAPI(title="MyTrainer.AI API")
 
 #Allow frontend requests for later
 app.add_middleware(
@@ -48,7 +48,7 @@ embedding_model, vector_store = build_pipeline()
 
 @app.get("/")
 def root():
-    return {"message": "ZenithLabs API is running"}
+    return {"message": "MyTrainer.AI API is running"}
 
 @app.post("/query", response_model=QueryResponse)
 def query_docs(request: QueryRequest):
