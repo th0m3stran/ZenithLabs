@@ -8,7 +8,7 @@ from app.chunking import chunk_documents
 from app.embeddings import EmbeddingModel
 from app.retrieval import VectorStore
 from app.generator import generate_response
-from app.schemas import QueryResponse, QueryResult, QueryRequest
+from app.schemas import QueryResponse, QueryRequest
 
 app = FastAPI(title="ZenithLabs API")
 
@@ -58,19 +58,8 @@ def query_docs(request: QueryRequest):
     contexts = [result["text"] for result in results]
     answer = generate_response(request.query, contexts)
 
-    formatted_results = [
-        QueryResult(
-            source=result["source"],
-            text=result["text"],
-            distance=result["distance"],
-        )
-        for result in results
-    ]
-
     return QueryResponse(
         query=request.query,
         answer=answer,
-        results=formatted_results
     )
-
 
