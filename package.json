@@ -1,0 +1,12 @@
+{
+  "name": "zenithlabs",
+  "private": true,
+  "scripts": {
+    "backend": "cd backend && ..\\.venv\\Scripts\\python -m uvicorn app.main:app --reload",
+    "frontend": "npm --prefix frontend run dev",
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
